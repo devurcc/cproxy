@@ -7,9 +7,11 @@ set -eu
 # Цветной вывод
 RED='\033[0;31m'
 GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
 RESET='\033[0m'
 
 info() { echo "${GREEN}$1${RESET}"; }
+warn() { echo "${YELLOW}$1${RESET}"; }
 error() { echo "${RED}ERROR: $1${RESET}" >&2; exit 1; }
 
 # Определение OS и архитектуры
@@ -31,15 +33,9 @@ esac
 BINARY_NAME="cproxy-${OS}-${ARCH}"
 RELEASES_URL="https://github.com/devurcc/cproxy/releases/latest/download/${BINARY_NAME}"
 
-# Директория установки
-BINDIR="${BINDIR:-/usr/local/bin}"
-if [ ! -w "$BINDIR" ] && [ ! -d "$BINDIR" ]; then
-    if [ -w "${HOME}/.local/bin" ] || mkdir -p "${HOME}/.local/bin" 2>/dev/null; then
-        BINDIR="${HOME}/.local/bin"
-    else
-        error "Cannot write to /usr/local/bin or ${HOME}/.local/bin. Try: sudo BINDIR=/usr/local/bin curl -fsSL ... | sh"
-    fi
-fi
+# Директория установки (по умолчанию ~/.local/bin)
+BINDIR="${BINDIR:-${HOME}/.local/bin}"
+mkdir -p "$BINDIR" || error "Cannot create $BINDIR"
 
 # Скачивание
 TMPDIR=$(mktemp -d)
@@ -53,4 +49,27 @@ chmod +x "$TMPDIR/cproxy"
 mv "$TMPDIR/cproxy" "${BINDIR}/cproxy"
 
 info "cproxy installed to ${BINDIR}/cproxy"
-info "Run 'cproxy' to get started."
+
+# Проверка PATH
+case ":${PATH}:" in
+    *":${BINDIR}:"*)
+        info "Run 'cproxy' to get started."
+        ;;
+    *)
+        warn "${BINDIR} is not in PATH."
+        # Определяем shell config файл
+        SHELL_RC=""
+        case "${SHELL:-}" in
+            */zsh) SHELL_RC="${HOME}/.zshrc" ;;
+            */bash) SHELL_RC="${HOME}/.bashrc" ;;
+            *) SHELL_RC="${HOME}/.profile" ;;
+        esac
+
+        # Добавляем в PATH
+        echo "" >> "$SHELL_RC"
+        echo "# Added by cproxy installer" >> "$SHELL_RC"
+        echo "export PATH=\"\${PATH}:${BINDIR}\"" >> "$SHELL_RC"
+        info "Added ${BINDIR} to PATH in ${SHELL_RC}"
+        info "Run 'source ${SHELL_RC}' or start a new shell, then 'cproxy'"
+        ;;
+esac
