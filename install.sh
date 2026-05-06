@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 # install.sh - Installs cproxy
-# Usage: curl -fsSL https://raw.githubusercontent.com/devurcc/cproxy/main/install.sh | sh
+# Usage: curl -fsSL https://raw.githubusercontent.com/devurcc/cproxy/master/install.sh | sh
 
 set -eu
 
