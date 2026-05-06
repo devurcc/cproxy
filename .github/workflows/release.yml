@@ -1,0 +1,39 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - target: bun-linux-x64
+            artifact: cproxy-linux-x64
+          - target: bun-linux-arm64
+            artifact: cproxy-linux-arm64
+          - target: bun-darwin-x64
+            artifact: cproxy-darwin-x64
+          - target: bun-darwin-arm64
+            artifact: cproxy-darwin-arm64
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - run: bun install --frozen-lockfile
+
+      - run: bun build --compile --minify --target=${{ matrix.target }} ./src/index.ts --outfile ./dist/${{ matrix.artifact }}
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
